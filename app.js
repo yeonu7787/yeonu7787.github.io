@@ -51,3 +51,17 @@ document.addEventListener("click",e=>{
 });
 window.addEventListener("hashchange",route);
 route();
+
+async function loadSavedHome(){
+ try{
+  const cfg=window.SUPABASE_CONFIG;if(!cfg)return;
+  const res=await fetch(cfg.url+"/rest/v1/site_profile?id=eq.home&select=data",{headers:{apikey:cfg.key}});
+  if(!res.ok)return;
+  const rows=await res.json();if(!rows[0]?.data)return;
+  Object.assign(profile,rows[0].data);
+  document.querySelector("#brand-name").textContent=profile.name;
+  document.querySelector("#footer-name").textContent=profile.name;
+  route();
+ }catch{}
+}
+loadSavedHome();

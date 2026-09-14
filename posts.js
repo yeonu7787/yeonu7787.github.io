@@ -3,14 +3,16 @@
  const cfg=window.SUPABASE_CONFIG, root=document.querySelector("#posts-app");
  const admin=root.dataset.mode==="admin";
  let session=null, dirty=false, busy=false, page=0;
+ const auth=window.BlogAuth;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const owner=()=>session?.user?.id===cfg.owner;
  const status=(s,error=false)=>{const el=document.querySelector("#status");if(el){el.textContent=s;el.className=error?"notice error":"notice";}};
- async function request(path,{method="GET",data,auth=false}={}) {
+ async function request(path,{method="GET",data,auth=false,upsert=false}={}) {
+  if(auth&&window.BlogAuth)session=await window.BlogAuth.restore();
   if(auth&&!owner())throw new Error("관리자 로그인이 필요합니다.");
   const headers={apikey:cfg.key,"Content-Type":"application/json"};
   if(auth)headers.Authorization="Bearer "+session.access_token;
-  if(method!=="GET")headers.Prefer="return=representation";
+  if(method!=="GET")headers.Prefer=upsert?"resolution=merge-duplicates,return=representation":"return=representation";
   let res;
   try{res=await fetch(cfg.url+path,{method,headers,body:data===undefined?undefined:JSON.stringify(data)});}
   catch{throw new Error("서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.");}
@@ -31,7 +33,7 @@
    const fd=new FormData(e.target);
    const result=await request("/auth/v1/token?grant_type=password",{method:"POST",data:{email:fd.get("email"),password:fd.get("password")}});
    if(result.user?.id!==cfg.owner){session=null;document.querySelector("#password").value="";throw new Error("이 계정에는 관리자 권한이 없습니다.");}
-   session=result;dirty=false;page=0;await dashboard();
+   session=result;if(auth){auth.save(result);await auth.menu();}dirty=false;page=0;await destination();
   });};
  }
  async function logout(){
@@ -39,7 +41,7 @@
   await run(async()=>{
    let failed=false;
    try{await request("/auth/v1/logout",{method:"POST",auth:true});}catch{failed=true;}
-   session=null;dirty=false;login(failed?"이 브라우저에서 로그아웃했습니다. 서버 세션 종료는 확인하지 못했습니다.":"로그아웃했습니다.");
+   if(auth){await auth.logout();await auth.menu();}session=null;dirty=false;window.blogDirty=false;login(failed?"이 브라우저에서 로그아웃했습니다. 서버 세션 종료는 확인하지 못했습니다.":"로그아웃했습니다.");
   });
  }
  function controls(rows,render){
@@ -52,7 +54,7 @@
   if(!owner()){login();return;}
   root.innerHTML='<div class="eyebrow">Private workspace</div><h1>게시글 관리</h1><div class="toolbar"><button id="new">새 글 작성</button><button id="logout" class="secondary">로그아웃</button></div><p id="status" role="status"></p><div id="list">불러오는 중…</div>';
   document.querySelector("#logout").onclick=logout;
-  document.querySelector("#new").onclick=()=>edit();
+  document.querySelector("#new").onclick=()=>location.assign("/write/");
   try{
    const rows=await request(listQuery(false),{auth:true});
    document.querySelector("#list").innerHTML=(rows.length?rows.map(r=>'<div class="post-row"><div><h2>'+esc(r.title)+'</h2><span class="muted">'+date(r.created_at)+' · '+(r.published?"공개":"비공개")+'</span></div><button class="secondary" data-edit="'+esc(r.id)+'">수정</button></div>').join(""):'<p class="muted">등록된 게시글이 없습니다.</p>')+paging(rows);
@@ -76,6 +78,8 @@
   document.querySelector("#editor").onsubmit=e=>{e.preventDefault();run(async()=>{
    const fd=new FormData(e.target),data={title:fd.get("title").trim(),content:fd.get("content"),published:fd.get("published")==="true",summary:fd.get("summary")||""};
    if(!data.title)throw new Error("제목을 입력해 주세요.");
+   if(auth)session=await auth.restore();
+   if(!owner())throw new Error("관리자 로그인이 필요합니다.");
    const files=Array.from(document.querySelector("#photos").files||[]);
    if(images.length+files.length>12)throw new Error("사진은 글당 최대 12장입니다.");
    for(const file of files){if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)throw new Error("JPEG/PNG/WebP 사진을 장당 5MB 이하로 선택해 주세요.");}
@@ -89,13 +93,40 @@
    document.querySelector("#photos").value="";renderImages();data.images=images;
    const rows=await request("/rest/v1/posts"+(post.id?"?id=eq."+encodeURIComponent(post.id):""),{method:post.id?"PATCH":"POST",data,auth:true});
    if(!rows?.length)throw new Error("저장되지 않았습니다. 관리자 권한을 확인해 주세요.");
-   dirty=false;await dashboard();status("저장했습니다.");
+   dirty=false;window.blogDirty=false;await dashboard();status("저장했습니다.");
   });};
   if(post.id)document.querySelector("#delete").onclick=()=>{if(!confirm("이 게시글을 영구 삭제할까요?"))return;run(async()=>{
    const rows=await request("/rest/v1/posts?id=eq."+encodeURIComponent(post.id),{method:"DELETE",auth:true});
    if(!rows?.length)throw new Error("삭제되지 않았습니다. 관리자 권한을 확인해 주세요.");
    dirty=false;await dashboard();status("삭제했습니다.");
   });};
+ }
+ async function editHome(){
+  root.innerHTML='<h1>홈 편집</h1><p id="status" role="status">불러오는 중…</p>';
+  try{
+   const rows=await request("/rest/v1/site_profile?id=eq.home&select=data");
+   const data=rows[0]?.data||window.PROFILE;
+   const fields=[["name","이름"],["greeting","인사말"],["introduction","홈 소개"],["biography","자기소개"],["email","이메일"]];
+   root.innerHTML='<div class="eyebrow">Home editor</div><h1>홈 편집</h1><form id="home-form" class="editor">'+fields.map(([key,label])=>'<label for="home-'+key+'">'+label+'</label><textarea id="home-'+key+'" name="'+key+'">'+esc(data[key]||"")+'</textarea>').join("")+'<h2>학력</h2><div id="education-fields"></div><button type="button" id="add-school" class="secondary">학력 추가</button><div class="toolbar"><button type="submit">홈에 저장</button><a class="text-link" href="/">홈으로</a></div></form><p id="status" role="status"></p>';
+   const schools=[...(data.education||[])];
+   const keys=[["school","학교명"],["department","학과"],["period","재학 기간"],["description","간단한 소개"]];
+   const capture=()=>schools.forEach((row,i)=>keys.forEach(([key])=>row[key]=document.querySelector("#edu-"+i+"-"+key).value));
+   function renderSchools(){
+    document.querySelector("#education-fields").innerHTML=schools.map((row,i)=>'<fieldset><legend>학력 '+(i+1)+'</legend>'+keys.map(([key,label])=>'<label for="edu-'+i+'-'+key+'">'+label+'</label><input id="edu-'+i+'-'+key+'" value="'+esc(row[key]||"")+'">').join("")+'<button class="secondary" type="button" data-school="'+i+'">학력 삭제</button></fieldset>').join("");
+    root.querySelectorAll("[data-school]").forEach(b=>b.onclick=()=>{capture();schools.splice(Number(b.dataset.school),1);dirty=true;window.blogDirty=true;renderSchools();});
+   }
+   renderSchools();
+   document.querySelector("#add-school").onclick=()=>{capture();schools.push({});dirty=true;window.blogDirty=true;renderSchools();};
+   document.querySelector("#home-form").oninput=()=>dirty=true;
+   document.querySelector("#home-form").onsubmit=e=>{e.preventDefault();run(async()=>{
+    capture();const fd=new FormData(e.target),updated={...data,education:schools};
+    fields.forEach(([key])=>updated[key]=fd.get(key));
+    if(!updated.name.trim())throw new Error("이름을 입력해 주세요.");
+    const result=await request("/rest/v1/site_profile?on_conflict=id",{method:"POST",data:{id:"home",data:updated},auth:true,upsert:true});
+    if(!result?.length)throw new Error("저장되지 않았습니다. 권한 설정을 확인해 주세요.");
+    dirty=false;window.blogDirty=false;status("홈에 저장했습니다.");
+   });};
+  }catch(e){status(e.message+" 홈 편집용 SQL이 적용되었는지 확인해 주세요.",true);}
  }
  function date(value){const d=new Date(value);return Number.isNaN(d.getTime())?"":esc(d.toLocaleDateString("ko-KR"));}
  async function blog(){
@@ -108,5 +139,17 @@
  }
  window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
  document.addEventListener("click",e=>{const a=e.target.closest("a");if(a&&dirty&&!confirm("저장하지 않은 내용을 버리고 이동할까요?"))e.preventDefault();});
- if(admin)login();else blog();
+ async function destination(){
+  if(!owner()){login();return;}
+  if(new URLSearchParams(location.search).get("view")==="home")await editHome();
+  else if(location.pathname.startsWith("/write"))edit();
+  else await dashboard();
+ }
+ async function start(){
+  if(!admin){blog();return;}
+  try{session=auth?await auth.restore():null;await destination();}
+  catch(e){login(e.message);}
+ }
+ root.addEventListener("input",()=>{window.blogDirty=true;});
+ start();
 })();
