@@ -32,9 +32,10 @@ function route() {
  document.querySelectorAll("nav a").forEach(a=>{if(a.hash==="#"+name)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
  document.title=(name==="home"?"Home":name==="about"?"About / CV":"페이지 없음")+" · "+profile.name;
  if(name==="home"){
-  main.innerHTML='<section class="home-layout"><div class="hero"><div class="eyebrow">Personal profile</div><h1>'+esc(profile.greeting)+'</h1><div class="prose lead">'+esc(profile.introduction)+'</div><a class="text-link" href="#about">자기소개와 이력 보기 <span aria-hidden="true">↗</span></a></div>'+portrait()+'</section>';
+  main.innerHTML='<div id="home-tools" class="page-tools"></div><section class="home-layout"><div class="hero"><div class="eyebrow">Personal profile</div><h1>'+esc(profile.greeting)+'</h1><div class="prose lead">'+esc(profile.introduction)+'</div><a class="text-link" href="#about">자기소개와 이력 보기 <span aria-hidden="true">↗</span></a></div>'+portrait()+'</section>';
   main.insertAdjacentHTML("beforeend",'<section class="home-section"><div class="eyebrow">Education</div><h2>학력</h2>'+(profile.education.length?profile.education.map(e=>'<div class="education-item"><span class="muted">'+esc(e.period)+'</span><h3>'+esc(e.school||e.title||"학교명 미입력")+'</h3><p>'+esc(e.department||"")+'</p><p class="prose">'+esc(e.description||e.detail||"")+'</p></div>').join(""):'<p class="muted">학력 정보를 준비하고 있습니다.</p>')+'</section><section class="home-section"><div class="section-heading"><h2>Recent Posts</h2><a class="text-link" href="./blog/">모든 글 보기</a></div><div id="recent-posts">불러오는 중…</div></section>');
   if(window.BlogView)window.BlogView.recent(document.querySelector("#recent-posts"));
+  if(window.BlogAuth)window.BlogAuth.tools(document.querySelector("#home-tools"),'<a class="text-link" href="/admin/?view=home">홈 수정</a>');
   const img=document.querySelector("#portrait-image");
   if(img)img.addEventListener("error",()=>{img.hidden=true;document.querySelector(".photo-placeholder").hidden=false;},{once:true});
  }else if(name==="about"){

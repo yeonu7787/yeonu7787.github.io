@@ -33,14 +33,18 @@ window.BlogAuth=(()=>{
   if(!container){container=document.createElement("span");container.id="account-nav";container.className="account-nav";nav.append(container);}
   try{
    const s=await restore();
-   container.innerHTML=s?'<a href="/admin/?view=home">홈 편집</a><a href="/write/">글쓰기</a><a href="/admin/">글 관리</a><button id="global-logout" class="secondary">로그아웃</button>':'<a href="/admin/">로그인</a>';
+   container.innerHTML=s?'<button id="global-logout" class="secondary">로그아웃</button>':'<a href="/admin/">로그인</a>';
    if(s)document.querySelector("#global-logout").onclick=async()=>{
     if(window.blogDirty&&!confirm("저장하지 않은 내용을 버리고 로그아웃할까요?"))return;
     window.blogDirty=false;await logout();location.assign("/");
    };
   }catch{container.innerHTML='<a href="/admin/">로그인 확인</a>';}
  }
- return {save,restore,logout,menu};
+ async function tools(el,html){
+  if(!el)return;
+  try{const s=await restore();if(el.isConnected!==false)el.innerHTML=s?html:"";}catch{el.innerHTML="";}
+ }
+ return {save,restore,logout,menu,tools};
 })();
 window.BlogAuth.menu();
 window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});

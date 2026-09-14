@@ -18,6 +18,7 @@
   catch{throw new Error("서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.");}
   const value=await res.json().catch(()=>null);
   if(!res.ok){
+   if(value?.code==="PGRST204"||value?.code==="42703")throw new Error("게시글 저장 항목이 아직 설정되지 않았습니다. Supabase SQL Editor에서 supabase-media.sql을 실행한 뒤 다시 저장해 주세요. 작성 중인 내용은 유지됩니다.");
    if(res.status===401||res.status===400&&path.includes("/auth/"))throw new Error("로그인 정보가 올바르지 않거나 세션이 만료되었습니다. 다시 로그인해 주세요.");
    if(res.status===403)throw new Error("접근 권한이 없습니다. Supabase의 관리자 권한 설정을 확인해 주세요.");
    throw new Error("요청 실패 ("+res.status+"). 테이블 구조와 권한 설정을 확인해 주세요.");
@@ -33,7 +34,7 @@
    const fd=new FormData(e.target);
    const result=await request("/auth/v1/token?grant_type=password",{method:"POST",data:{email:fd.get("email"),password:fd.get("password")}});
    if(result.user?.id!==cfg.owner){session=null;document.querySelector("#password").value="";throw new Error("이 계정에는 관리자 권한이 없습니다.");}
-   session=result;if(auth){auth.save(result);await auth.menu();}dirty=false;page=0;await destination();
+   session=result;if(auth){auth.save(result);await auth.menu();}dirty=false;window.blogDirty=false;location.assign("/");
   });};
  }
  async function logout(){
@@ -74,7 +75,7 @@
   document.querySelector("#published").value=String(!!post.published);
   document.querySelector("#logout").onclick=logout;
   document.querySelector("#editor").oninput=()=>dirty=true;
-  document.querySelector("#cancel").onclick=()=>{if(dirty&&!confirm("저장하지 않은 내용을 버릴까요?"))return;dirty=false;run(dashboard);};
+  document.querySelector("#cancel").onclick=()=>{if(dirty&&!confirm("저장하지 않은 내용을 버릴까요?"))return;dirty=false;window.blogDirty=false;location.assign("/blog/");};
   document.querySelector("#editor").onsubmit=e=>{e.preventDefault();run(async()=>{
    const fd=new FormData(e.target),data={title:fd.get("title").trim(),content:fd.get("content"),published:fd.get("published")==="true",summary:fd.get("summary")||""};
    if(!data.title)throw new Error("제목을 입력해 주세요.");
@@ -93,12 +94,12 @@
    document.querySelector("#photos").value="";renderImages();data.images=images;
    const rows=await request("/rest/v1/posts"+(post.id?"?id=eq."+encodeURIComponent(post.id):""),{method:post.id?"PATCH":"POST",data,auth:true});
    if(!rows?.length)throw new Error("저장되지 않았습니다. 관리자 권한을 확인해 주세요.");
-   dirty=false;window.blogDirty=false;await dashboard();status("저장했습니다.");
+   dirty=false;window.blogDirty=false;location.assign("/blog/?id="+encodeURIComponent(rows[0].id));
   });};
   if(post.id)document.querySelector("#delete").onclick=()=>{if(!confirm("이 게시글을 영구 삭제할까요?"))return;run(async()=>{
    const rows=await request("/rest/v1/posts?id=eq."+encodeURIComponent(post.id),{method:"DELETE",auth:true});
    if(!rows?.length)throw new Error("삭제되지 않았습니다. 관리자 권한을 확인해 주세요.");
-   dirty=false;await dashboard();status("삭제했습니다.");
+   dirty=false;window.blogDirty=false;location.assign("/blog/");
   });};
  }
  async function editHome(){
@@ -142,7 +143,14 @@
  async function destination(){
   if(!owner()){login();return;}
   if(new URLSearchParams(location.search).get("view")==="home")await editHome();
-  else if(location.pathname.startsWith("/write"))edit();
+  else if(location.pathname.startsWith("/write")){
+   const id=new URLSearchParams(location.search).get("id");
+   if(id){
+    const rows=await request("/rest/v1/posts?select=*&id=eq."+encodeURIComponent(id)+"&limit=1",{auth:true});
+    if(!rows.length){root.innerHTML='<h1>글을 찾을 수 없습니다.</h1><a href="/blog/">Blog 목록으로</a>';return;}
+    edit(rows[0]);
+   }else edit();
+  }
   else await dashboard();
  }
  async function start(){

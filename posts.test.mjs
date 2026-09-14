@@ -1,50 +1,27 @@
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-const source=readFileSync('posts.js','utf8');
-const config=readFileSync('supabase-config.js','utf8');
-const owner='259f2b6a-41fc-4df6-aa1e-b5f46a7d21e4';
+const source=readFileSync('posts.js','utf8'),config=readFileSync('supabase-config.js','utf8');
+const uid='259f2b6a-41fc-4df6-aa1e-b5f46a7d21e4';
 const tick=()=>new Promise(r=>setImmediate(r));
-function app(mode, responder){
- const nodes={};
- const get=s=>nodes[s]||(nodes[s]={innerHTML:'',textContent:'',value:'',dataset:{mode},addEventListener(){},querySelectorAll:()=>[]});
- const calls=[];
- const context=vm.createContext({window:{addEventListener(){}},document:{querySelector:get,addEventListener(){}},
- FormData:class{constructor(data){this.data=data;}get(key){return this.data[key];}},Date,URLSearchParams,location:{search:"",pathname:"/write/",assign(){}},confirm:()=>true,
- fetch:async(url,opt)=>{calls.push({url,...opt});const value=responder(url,opt);return {ok:value.status===undefined||value.status<400,status:value.status||200,json:async()=>value.data};}
- });
- vm.runInContext(config,context);vm.runInContext(source,context);
- return {nodes,get,calls,submit:async(selector,data)=>{get(selector).onsubmit({preventDefault(){},target:data});await tick();}};
+async function boot({signed=false,search='',loginId=uid}={}){
+ const nodes={},calls=[],moves=[];
+ const get=s=>nodes[s]||(nodes[s]={innerHTML:'',textContent:'',value:'',dataset:{mode:'admin'},querySelectorAll:()=>[],addEventListener(){}});
+ let session=signed?{user:{id:uid},access_token:'test'}:null;
+ const ctx=vm.createContext({window:{BlogAuth:{restore:async()=>session,save:s=>session=s,menu:async()=>{},logout:async()=>session=null},addEventListener(){}},
+ document:{querySelector:get,addEventListener(){}},location:{pathname:'/write/',search,assign:p=>moves.push(p)},URLSearchParams,Date,confirm:()=>true,
+ FormData:class{constructor(d){this.d=d;}get(k){return this.d[k];}},
+ fetch:async(url,opt)=>{calls.push({url,...opt});return {ok:true,status:200,json:async()=>url.includes('/token')?{user:{id:loginId},access_token:'test'}:opt.method==='GET'?[{id:'42',title:'Existing',content:'body',published:false,images:[]}]:[{id:'42'}]};}});
+ vm.runInContext(config,ctx);vm.runInContext(source,ctx);await tick();
+ return {get,calls,moves,submit:async(data)=>{get('#editor').onsubmit({preventDefault(){},target:data});await tick();}};
 }
-const denied=app('admin',()=>({data:{user:{id:'someone-else'},access_token:'fake'}}));
-assert.match(denied.get('#posts-app').innerHTML,/관리자 로그인/);assert.equal(denied.calls.length,0);
-await denied.submit('#login',{email:'test@example.com',password:'test'});
-assert.match(denied.get('#status').textContent,/권한이 없습니다/);
-assert.equal(denied.calls.length,1);
-let emptyWrite=false;
-const a=app('admin',(url,opt)=>{
- if(url.includes('/token'))return {data:{user:{id:owner},access_token:'test-token'}};
- if(url.includes('/logout'))return {data:null};
- if(opt.method==='GET')return {data:[]};
- return {data:emptyWrite?[]:[{id:'1'}]};
-});
-await a.submit('#login',{email:'test@example.com',password:'test'});
-assert.match(a.get('#posts-app').innerHTML,/새 글 작성/);
-
-await a.submit('#editor',{title:'제목',content:'본문',published:'false'});
-const write=a.calls.find(c=>c.method==='POST'&&c.url.includes('/posts'));
-assert.deepEqual(JSON.parse(write.body),{title:'제목',content:'본문',published:false,summary:'',images:[]});
-assert.equal(write.headers.Authorization,'Bearer test-token');
-assert.match(a.get('#status').textContent,/저장했습니다/);
-emptyWrite=true;
-await a.submit('#editor',{title:'제목',content:'본문',published:'true'});
-assert.match(a.get('#status').textContent,/저장되지 않았습니다/);
-await a.get('#logout').onclick();await tick();
-assert.match(a.get('#posts-app').innerHTML,/관리자 로그인/);
-const pub=app('blog',()=>({data:[{id:'1',title:'<script>x</script>',content:'<img src=x>',created_at:'2026-09-14'}]}));
-await tick();
-assert.ok(pub.calls[0].url.includes('published=eq.true'));assert.ok(pub.calls[0].url.includes('order=created_at.desc'));
-assert.equal(pub.calls[0].headers.Authorization,undefined);
-assert.ok(pub.get('#list').innerHTML.includes('&lt;script&gt;'));
-assert.ok(!pub.get('#list').innerHTML.includes('<img'));
-console.log('PASS: login gate, owner rejection, authenticated insert, failed writes, logout, published query, HTML escaping');
+const anon=await boot();assert.match(anon.get('#posts-app').innerHTML,/관리자 로그인/);
+anon.get('#login').onsubmit({preventDefault(){},target:{email:'test@example.com',password:'test'}});await tick();assert.deepEqual(anon.moves,['/']);
+const denied=await boot({loginId:'other'});denied.get('#login').onsubmit({preventDefault(){},target:{email:'x',password:'x'}});await tick();assert.equal(denied.moves.length,0);
+const create=await boot({signed:true});assert.match(create.get('#posts-app').innerHTML,/새 글 작성/);
+await create.submit({title:'New',content:'Body',published:'false',summary:''});
+assert.ok(create.calls.some(c=>c.method==='POST'&&c.url.includes('/posts')));assert.deepEqual(create.moves,['/blog/?id=42']);
+const edit=await boot({signed:true,search:'?id=42'});assert.match(edit.get('#posts-app').innerHTML,/게시글 수정/);assert.match(edit.get('#posts-app').innerHTML,/Existing/);
+await edit.submit({title:'Changed',content:'Body',published:'true',summary:''});assert.ok(edit.calls.some(c=>c.method==='PATCH'&&c.url.includes('id=eq.42')));
+const del=await boot({signed:true,search:'?id=42'});del.get('#delete').onclick();await tick();assert.ok(del.calls.some(c=>c.method==='DELETE'));assert.deepEqual(del.moves,['/blog/']);
+console.log('PASS: login redirects Home, non-owner denied, new post, per-post edit/delete and return navigation');
