@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-const files = {'/admin':'admin/index.html','/admin/':'admin/index.html','/blog':'blog/index.html','/blog/':'blog/index.html','/posts.js':'posts.js','/supabase-config.js':'supabase-config.js','/':'index.html','/index.html':'index.html','/app.js':'app.js','/content.js':'content.js','/style.css':'style.css'};
+const files = {'/admin':'admin/index.html','/admin/':'admin/index.html','/blog':'blog/index.html','/blog/':'blog/index.html','/blog-view.js':'blog-view.js','/posts.js':'posts.js','/supabase-config.js':'supabase-config.js','/':'index.html','/index.html':'index.html','/app.js':'app.js','/content.js':'content.js','/style.css':'style.css'};
 createServer(async(req,res)=>{
  const path=new URL(req.url,'http://localhost').pathname;
  if(path==="/admin"||path==="/blog"){res.writeHead(301,{Location:path+"/"});res.end();return;}

@@ -22,7 +22,7 @@
   }
   return value;
  }
- const listQuery=published=>"/rest/v1/posts?select=id,title,content,published,created_at"+(published?"&published=eq.true":"")+"&order=created_at.desc,id.desc&limit=20&offset="+(page*20);
+ const listQuery=published=>"/rest/v1/posts?select=*"+(published?"&published=eq.true":"")+"&order=created_at.desc,id.desc&limit=20&offset="+(page*20);
  async function run(fn){if(busy)return;busy=true;root.querySelectorAll("button").forEach(b=>b.disabled=true);try{await fn();}catch(e){status(e.message,true);}finally{busy=false;root.querySelectorAll("button").forEach(b=>b.disabled=false);}}
  function login(message=""){
   root.innerHTML='<div class="eyebrow">Private workspace</div><h1>관리자 로그인</h1><p class="muted">본인 계정으로 로그인해 주세요.</p><form id="login" class="editor"><label for="email">이메일</label><input id="email" name="email" type="email" autocomplete="username" required><label for="password">비밀번호</label><input id="password" name="password" type="password" autocomplete="current-password" required><div class="toolbar"><button type="submit">로그인</button></div></form><p id="status" role="status"></p>';
@@ -61,15 +61,32 @@
   }catch(e){document.querySelector("#list").textContent="목록을 불러오지 못했습니다.";status(e.message,true);}
  }
  function edit(post={}){
+  let images=[...(post.images||[])];
   if(!owner()){login();return;}
-  root.innerHTML='<div class="eyebrow">Editor</div><h1>'+(post.id?"게시글 수정":"새 글 작성")+'</h1><form id="editor" class="editor"><label for="title">제목</label><input name="title" id="title" required maxlength="200" value="'+esc(post.title)+'"><label for="content">본문</label><textarea name="content" id="content" required>'+esc(post.content)+'</textarea><label for="published">공개 설정</label><select name="published" id="published"><option value="false">비공개 초안</option><option value="true">공개</option></select><div class="toolbar"><button type="submit">저장</button><button type="button" id="cancel" class="secondary">목록으로</button>'+(post.id?'<button type="button" id="delete" class="danger">삭제</button>':'')+'<button type="button" id="logout" class="secondary">로그아웃</button></div></form><p id="status" role="status"></p>';
+  root.innerHTML='<div class="eyebrow">Editor</div><h1>'+(post.id?"게시글 수정":"새 글 작성")+'</h1><form id="editor" class="editor"><label for="title">제목</label><input name="title" id="title" required maxlength="200" value="'+esc(post.title)+'"><label for="content">본문</label><textarea name="content" id="content" required>'+esc(post.content)+'</textarea><label for="summary">짧은 요약</label><input id="summary" name="summary" maxlength="500" value="'+esc(post.summary)+'"><label for="photos">사진 추가 (JPEG/PNG/WebP, 장당 5MB)</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="muted">첫 사진이 대표 이미지입니다. 추가한 순서대로 본문 아래에 표시됩니다.</p><div id="image-list"></div><label for="published">공개 설정</label><select name="published" id="published"><option value="false">비공개 초안</option><option value="true">공개</option></select><div class="toolbar"><button type="submit">저장</button><button type="button" id="cancel" class="secondary">목록으로</button>'+(post.id?'<button type="button" id="delete" class="danger">삭제</button>':'')+'<button type="button" id="logout" class="secondary">로그아웃</button></div></form><p id="status" role="status"></p>';
+  function renderImages(){
+   document.querySelector("#image-list").innerHTML=images.map((path,i)=>'<div class="post-row"><span>사진 '+(i+1)+(i===0?' · 대표 이미지':'')+'</span><button type="button" class="secondary" data-remove="'+i+'">제외</button></div>').join("");
+   root.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{images.splice(Number(b.dataset.remove),1);dirty=true;renderImages();});
+  }
+  renderImages();
   document.querySelector("#published").value=String(!!post.published);
   document.querySelector("#logout").onclick=logout;
   document.querySelector("#editor").oninput=()=>dirty=true;
   document.querySelector("#cancel").onclick=()=>{if(dirty&&!confirm("저장하지 않은 내용을 버릴까요?"))return;dirty=false;run(dashboard);};
   document.querySelector("#editor").onsubmit=e=>{e.preventDefault();run(async()=>{
-   const fd=new FormData(e.target),data={title:fd.get("title").trim(),content:fd.get("content"),published:fd.get("published")==="true"};
+   const fd=new FormData(e.target),data={title:fd.get("title").trim(),content:fd.get("content"),published:fd.get("published")==="true",summary:fd.get("summary")||""};
    if(!data.title)throw new Error("제목을 입력해 주세요.");
+   const files=Array.from(document.querySelector("#photos").files||[]);
+   if(images.length+files.length>12)throw new Error("사진은 글당 최대 12장입니다.");
+   for(const file of files){if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)throw new Error("JPEG/PNG/WebP 사진을 장당 5MB 이하로 선택해 주세요.");}
+   for(const file of files){
+    const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[file.type];
+    const path=cfg.owner+"/"+crypto.randomUUID()+"."+ext;
+    const result=await fetch(cfg.url+"/storage/v1/object/post-images/"+path,{method:"POST",headers:{apikey:cfg.key,Authorization:"Bearer "+session.access_token,"Content-Type":file.type},body:file});
+    if(!result.ok){document.querySelector("#photos").value="";renderImages();throw new Error("사진 업로드 실패. 완료된 사진은 유지됩니다. 나머지 사진을 다시 선택하세요.");}
+    images.push(path);
+   }
+   document.querySelector("#photos").value="";renderImages();data.images=images;
    const rows=await request("/rest/v1/posts"+(post.id?"?id=eq."+encodeURIComponent(post.id):""),{method:post.id?"PATCH":"POST",data,auth:true});
    if(!rows?.length)throw new Error("저장되지 않았습니다. 관리자 권한을 확인해 주세요.");
    dirty=false;await dashboard();status("저장했습니다.");

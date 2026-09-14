@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const source=readFileSync(new URL('./app.js',import.meta.url),'utf8');
 const content=readFileSync(new URL('./content.js',import.meta.url),'utf8');
 function boot(hash, changes={}) {
- const nodes=Object.fromEntries(['main','#year','#brand-name','#footer-name','.photo-placeholder'].map(key=>[key,{innerHTML:'',textContent:'',hidden:true,focus(){},scrollIntoView(){}}]));
+ const nodes=Object.fromEntries(['main','#year','#brand-name','#footer-name','.photo-placeholder'].map(key=>[key,{innerHTML:'',insertAdjacentHTML(position,html){this.innerHTML+=html;},textContent:'',hidden:true,focus(){},scrollIntoView(){}}]));
  let imageError;
  nodes['#portrait-image']={hidden:false,addEventListener(event,fn){if(event==='error')imageError=fn;}};
  const events={};

@@ -33,7 +33,7 @@ assert.match(a.get('#posts-app').innerHTML,/게시글 관리/);
 a.get('#new').onclick();
 await a.submit('#editor',{title:'제목',content:'본문',published:'false'});
 const write=a.calls.find(c=>c.method==='POST'&&c.url.includes('/posts'));
-assert.deepEqual(JSON.parse(write.body),{title:'제목',content:'본문',published:false});
+assert.deepEqual(JSON.parse(write.body),{title:'제목',content:'본문',published:false,summary:'',images:[]});
 assert.equal(write.headers.Authorization,'Bearer test-token');
 assert.match(a.get('#status').textContent,/저장했습니다/);
 a.get('#new').onclick();emptyWrite=true;

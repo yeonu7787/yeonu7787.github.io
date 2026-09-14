@@ -24,7 +24,7 @@ function portrait() {
  '<div class="photo-placeholder"'+(safe?' hidden':'')+'><span class="photo-monogram">'+esc(profile.name.slice(0,1).toUpperCase())+'</span><span>사진 준비 중</span></div></figure>';
 }
 function timeline(title, rows) {
- return '<section class="cv-section"><h2>'+esc(title)+'</h2>'+(rows.length?'<div class="timeline">'+rows.map(r=>'<div class="cv-row"><span class="period">'+esc(r.period)+'</span><div><h3>'+esc(r.title)+'</h3><p class="prose">'+esc(r.detail)+'</p></div></div>').join("")+'</div>':'<p class="muted">아직 등록된 내용이 없습니다.</p>')+'</section>';
+ return '<section class="cv-section"><h2>'+esc(title)+'</h2>'+(rows.length?'<div class="timeline">'+rows.map(r=>'<div class="cv-row"><span class="period">'+esc(r.period)+'</span><div><h3>'+esc(r.school||r.title)+'</h3><p class="prose">'+esc([r.department,r.description||r.detail].filter(Boolean).join("\n"))+'</p></div></div>').join("")+'</div>':'<p class="muted">아직 등록된 내용이 없습니다.</p>')+'</section>';
 }
 function route() {
  const path=location.hash.slice(1).replace(/^\/+|\/+$/g,"") || "home";
@@ -33,6 +33,8 @@ function route() {
  document.title=(name==="home"?"Home":name==="about"?"About / CV":"페이지 없음")+" · "+profile.name;
  if(name==="home"){
   main.innerHTML='<section class="home-layout"><div class="hero"><div class="eyebrow">Personal profile</div><h1>'+esc(profile.greeting)+'</h1><div class="prose lead">'+esc(profile.introduction)+'</div><a class="text-link" href="#about">자기소개와 이력 보기 <span aria-hidden="true">↗</span></a></div>'+portrait()+'</section>';
+  main.insertAdjacentHTML("beforeend",'<section class="home-section"><div class="eyebrow">Education</div><h2>학력</h2>'+(profile.education.length?profile.education.map(e=>'<div class="education-item"><span class="muted">'+esc(e.period)+'</span><h3>'+esc(e.school||e.title||"학교명 미입력")+'</h3><p>'+esc(e.department||"")+'</p><p class="prose">'+esc(e.description||e.detail||"")+'</p></div>').join(""):'<p class="muted">학력 정보를 준비하고 있습니다.</p>')+'</section><section class="home-section"><div class="section-heading"><h2>Recent Posts</h2><a class="text-link" href="./blog/">모든 글 보기</a></div><div id="recent-posts">불러오는 중…</div></section>');
+  if(window.BlogView)window.BlogView.recent(document.querySelector("#recent-posts"));
   const img=document.querySelector("#portrait-image");
   if(img)img.addEventListener("error",()=>{img.hidden=true;document.querySelector(".photo-placeholder").hidden=false;},{once:true});
  }else if(name==="about"){

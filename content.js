@@ -9,7 +9,7 @@ window.PROFILE = {
   photoAlt: "이연우 프로필 사진",
   biography: "자기소개를 준비하고 있습니다.",
   // 항목 예시: { period: "기간", title: "학교 또는 직책", detail: "전공 또는 담당한 일" }
-  education: [],
+  education: [{ school: "", department: "소프트웨어 공학과", period: "2026년 입학", description: "" }],
   experience: [],
   // 예시: ["관심 분야 1", "관심 분야 2"]
   interests: [],
