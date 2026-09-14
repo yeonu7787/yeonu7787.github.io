@@ -1,6 +1,17 @@
 "use strict";
 const main = document.querySelector("main");
-const profile = window.PROFILE;
+const profile = window.PROFILE || {
+  "name": "이연우",
+  "greeting": "안녕하세요.",
+  "introduction": "소프트웨어 공학과 26학번 이연우 입니다. 제 블로그에 방문해 주셔서 감사합니다.",
+  "photo": "assets/profile.jpg",
+  "photoAlt": "이연우 프로필 사진",
+  "biography": "자기소개를 준비하고 있습니다.",
+  "education": [],
+  "experience": [],
+  "interests": [],
+  "email": ""
+};
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 document.querySelector("#year").textContent = new Date().getFullYear();
 document.querySelector("#brand-name").textContent = profile.name;
