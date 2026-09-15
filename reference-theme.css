@@ -1,0 +1,39 @@
+/* Academic-style layout inspired by the supplied SEA Lab reference. */
+:root{--ink:#243b44;--blue:#087398;--muted:#65727a;--line:#e4e7e9;--soft:#f5f5f5;background:#f3f5f7;color:#333;font-family:Arial,"Malgun Gothic",sans-serif}
+body{border-top:4px solid #1388ab;padding:24px 18px 40px;font-size:16px}
+.site-shell{max-width:1080px;margin:auto;background:white;border:1px solid #ddd;border-radius:4px;box-shadow:0 1px 5px #00000012;padding:22px}
+header{max-width:none;min-height:0;padding:0;display:block;border:0}
+.brand{display:block;font-size:34px;line-height:1.35;letter-spacing:-.035em;font-weight:600;color:#12343f;margin:0 0 18px}
+.brand small{display:inline-block;margin:0 0 0 16px;letter-spacing:.025em;font-size:17px;color:#596a72;font-weight:400}
+header nav{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;gap:5px;font-size:14px;min-height:48px}
+header nav>a{padding:9px 15px;color:#17627e;border:0;border-radius:3px}
+header nav>a[aria-current]{background:#087398;color:#fff;border:0}
+header nav>a:hover{background:#eef5f7;color:#14516a}
+.account-nav{margin-left:auto;font-size:14px;gap:10px;padding:0 8px}.account-nav>a{color:#17627e}
+.account-nav button{font-size:14px;padding:6px 10px}
+.site-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:24px;padding-top:22px;align-items:start}
+main{max-width:none;margin:0;padding:0;min-height:420px;min-width:0}
+.side-panel{background:#f5f5f5;border:1px solid #e1e1e1;border-radius:4px;padding:18px;margin-bottom:20px;box-shadow:inset 0 1px 2px #00000004}
+.side-panel h2{font-size:20px;font-weight:400;line-height:1.4;margin:0 0 14px;border-bottom:1px solid #e7e7e7;padding-bottom:10px}
+.side-panel ul{padding-left:19px;margin:0}.side-panel li{margin:9px 0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}.side-panel a{color:#17627e}
+.side-panel p{font-size:14px;line-height:1.8}.side-panel .text-link{font-size:14px;margin-top:5px}
+h1{font-size:27px;font-weight:400;letter-spacing:-.025em;border-bottom:1px solid var(--line);padding-bottom:15px;margin-bottom:22px}
+h2{font-size:21px;line-height:1.5}h3{font-size:17px;line-height:1.6}
+.eyebrow{font-size:12px;letter-spacing:.07em;margin-bottom:10px;color:#607c89}
+.home-layout{grid-template-columns:minmax(0,1fr) 150px;gap:25px;align-items:start;padding:0 0 25px}
+.hero h1{font-size:27px;font-weight:400;line-height:1.5}.hero .lead{font-size:16px;color:#444;line-height:1.85}
+.portrait{border:1px solid #dedede;padding:4px;background:#fff;max-width:150px}.portrait img{object-fit:contain}
+.text-link{font-size:14px;color:#17627e;border-color:#b8ced7;margin-top:15px;padding-bottom:3px}
+.home-section{padding:22px 0;border-top:1px solid var(--line)}.home-section>h2{margin-top:0}
+.education-item{grid-template-columns:125px minmax(0,1fr);gap:20px;padding:18px 0}.education-item h3{font-size:17px}.education-item p{font-size:15px}.education-item .muted{font-size:14px}
+.section-heading{margin-bottom:12px;gap:15px}.section-heading h1,.section-heading h2{margin:0}
+.post-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}.card-copy{padding:15px}.card-copy h3{font-size:17px;margin:10px 0}.card-copy p{font-size:14px;margin:0}.card-copy .muted{font-size:13px}
+.post-card{border-radius:3px;overflow:hidden}.post-card:hover{border-color:#8db7c7}.card-photo{aspect-ratio:16/9}
+.biography,.post-detail .prose{font-size:16px}.post-detail{max-width:100%}
+.cv-section{grid-template-columns:125px minmax(0,1fr);gap:20px;padding:22px 0}.cv-row{grid-template-columns:1fr;gap:6px}
+.page-tools{margin-bottom:14px}.page-tools .text-link{font-size:14px}
+button{background:#087398;border-color:#076484;font-size:14px;padding:9px 14px}
+.editor{margin-top:20px}.editor label{font-size:15px}.editor input,.editor textarea,.editor select{font-size:16px}
+footer{max-width:none;margin-top:26px;padding:16px 0 0;font-size:13px}.skip{z-index:10}
+@media(max-width:800px){.site-layout{grid-template-columns:1fr}.site-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:18px}.side-panel{margin-bottom:0}main{min-height:0}.brand{font-size:29px}.brand small{font-size:14px}}
+@media(max-width:520px){body{padding:12px 10px 24px}.site-shell{padding:16px}.brand small{display:block;margin:6px 0 0}.home-layout{grid-template-columns:minmax(0,1fr) 100px;gap:15px}.portrait{max-width:100px}.hero h1{font-size:24px}.hero .lead{font-size:16px}.post-grid,.site-sidebar{grid-template-columns:1fr}.education-item,.cv-section{grid-template-columns:1fr}.education-item>.muted{border-right:0;grid-row:auto}.education-item>h3,.education-item>p{grid-column:1}header nav{gap:2px}header nav>a{padding:8px 11px}.account-nav{margin-left:0;width:100%;padding:8px 11px}.section-heading{align-items:flex-start;flex-direction:column}}
