@@ -18,7 +18,7 @@ window.BlogAuth=(()=>{
     save(await json("token?grant_type=refresh_token",{method:"POST",headers:{apikey:cfg.key,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:current.refresh_token})}));
    }
    const user=await json("user",{headers:{apikey:cfg.key,Authorization:"Bearer "+current.access_token}});
-   if(user.id!==cfg.owner){save(null);return null;}
+   if(!user.id){save(null);return null;}
    current.user=user;save(current);return current;
   })();
   try{return await pending;}finally{pending=null;}
@@ -33,16 +33,16 @@ window.BlogAuth=(()=>{
   if(!container){container=document.createElement("span");container.id="account-nav";container.className="account-nav";nav.append(container);}
   try{
    const s=await restore();
-   container.innerHTML=s?'<button id="global-logout" class="secondary">로그아웃</button>':'<a href="/admin/">로그인</a>';
+   container.innerHTML=s?'<a href="/account/">내 정보</a><button id="global-logout" class="secondary">로그아웃</button>':'<a href="/account/">로그인</a>';
    if(s)document.querySelector("#global-logout").onclick=async()=>{
     if(window.blogDirty&&!confirm("저장하지 않은 내용을 버리고 로그아웃할까요?"))return;
     window.blogDirty=false;await logout();location.assign("/");
    };
-  }catch{container.innerHTML='<a href="/admin/">로그인 확인</a>';}
+  }catch{container.innerHTML='<a href="/account/">로그인 확인</a>';}
  }
  async function tools(el,html){
   if(!el)return;
-  try{const s=await restore();if(el.isConnected!==false)el.innerHTML=s?html:"";}catch{el.innerHTML="";}
+  try{const s=await restore();if(el.isConnected!==false)el.innerHTML=s?.user.id===cfg.owner?html:"";}catch{el.innerHTML="";}
  }
  return {save,restore,logout,menu,tools};
 })();

@@ -12,5 +12,5 @@ first.save({user:{id:owner},access_token:'expired',refresh_token:'refresh',expir
 const restored=load();assert.equal((await restored.restore()).access_token,'refreshed');
 await restored.logout();assert.equal(await load().restore(),null);
 first.save({user:{id:owner},access_token:'token',expires_at:Date.now()/1000+3600});
-assert.equal(await load('not-owner').restore(),null);
+assert.equal((await load('not-owner').restore()).user.id,'not-owner');
 console.log('PASS: session navigation/reload, refresh, logout, owner validation');

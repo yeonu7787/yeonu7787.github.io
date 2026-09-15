@@ -162,7 +162,7 @@
   }catch(e){status(e.message,true);}
  }
  async function destination(){
-  if(!owner()){login();return;}
+  if(!owner()){if(session){root.innerHTML='<h1>관리자 권한이 없습니다.</h1><a href="/">홈으로</a>';}else login();return;}
   if(new URLSearchParams(location.search).get("view")==="trash"){await trash();return;}
   if(new URLSearchParams(location.search).get("view")==="home")await editHome();
   else if(location.pathname.startsWith("/write")){

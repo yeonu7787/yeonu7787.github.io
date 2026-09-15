@@ -3,7 +3,7 @@ window.EditorKit=(()=>{
  const cfg=window.SUPABASE_CONFIG;
  async function upload(file,bucket="post-images"){
   if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5242880)throw new Error("JPEG/PNG/WebP 사진을 5MB 이하로 선택해 주세요.");
-  const s=await window.BlogAuth.restore();if(!s)throw new Error("로그인이 필요합니다.");
+  const s=await window.BlogAuth.restore();if(!s||s.user.id!==cfg.owner)throw new Error("로그인이 필요합니다.");
   const path=cfg.owner+"/"+crypto.randomUUID()+"."+({"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[file.type]);
   const r=await fetch(cfg.url+"/storage/v1/object/"+bucket+"/"+path,{method:"POST",headers:{apikey:cfg.key,Authorization:"Bearer "+s.access_token,"Content-Type":file.type},body:file});
   if(!r.ok)throw new Error("사진 업로드 실패. 저장소 SQL과 로그인 상태를 확인해 주세요.");

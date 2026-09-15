@@ -15,7 +15,7 @@
  if(account&&window.BlogAuth){
   try{
    const session=await window.BlogAuth.restore();
-   account.innerHTML=session?'<p>관리자로 로그인되어 있습니다.</p><a class="text-link" href="/blog/">Blog로 이동</a>':'<p>로그인하면 홈과 게시글을 수정할 수 있습니다.</p><a class="text-link" href="/admin/">로그인</a>';
-  }catch{account.innerHTML='<a href="/admin/">로그인 확인</a>';}
+   account.innerHTML=session?'<p>로그인되어 있습니다.</p><a class="text-link" href="/blog/">Blog로 이동</a>':'<p>로그인하면 홈과 게시글을 수정할 수 있습니다.</p><a class="text-link" href="/account/">로그인</a>';
+  }catch{account.innerHTML='<a href="/account/">로그인 확인</a>';}
  }
 })();
