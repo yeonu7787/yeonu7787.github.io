@@ -48,9 +48,20 @@ window.BlogView = (() => {
     const categoryQuery=category?"&category=eq."+encodeURIComponent(category):"";
     const page=Math.max(0,Math.floor(Number(params.get("page"))||0));
     const rows=await get("select=*"+filter+categoryQuery+"&order=created_at.desc,id.desc&limit=12&offset="+page*12,session);
-    root.innerHTML='<div class="eyebrow">Personal notes</div><div class="section-heading"><h1>Blog</h1>'+(session?'<div><a class="text-link" href="/write/">새 글 작성</a> · <a href="/admin/?view=trash">휴지통</a></div>':'')+'</div><div class="category-links">'+['전체','일상','공부','개발'].map(c=>'<a href="?category='+encodeURIComponent(c==='전체'?'':c)+'"'+((category||'전체')===c?' aria-current="page"':'')+'>'+c+'</a>').join('')+'</div>'+(rows.length?'<div class="post-grid">'+rows.map(card).join("")+'</div>':'<p>아직 공개된 글이 없습니다.</p>')+
+    root.innerHTML='<div class="eyebrow">Personal notes</div><div class="section-heading"><h1>Blog</h1>'+(session?'<div><a class="text-link" href="/write/?category='+encodeURIComponent(category)+'">'+esc(category?category+"에 글 작성":"새 글 작성")+'</a> · <a href="/admin/?view=trash">휴지통</a></div>':'')+'</div><div class="category-links">'+['전체','일상','공부','개발'].map(c=>'<a href="?category='+encodeURIComponent(c==='전체'?'':c)+'"'+((category||'전체')===c?' aria-current="page"':'')+'>'+c+'</a>').join('')+'</div>'+(rows.length?'<div class="post-grid">'+rows.map(p=>'<div class="managed-card">'+card(p)+(session?'<form class="move-category" data-post="'+esc(p.id)+'"><label for="move-'+esc(p.id)+'">카테고리 이동</label><select id="move-'+esc(p.id)+'" name="category">'+['일상','공부','개발'].map(c=>'<option'+(c===(p.category||'일상')?' selected':'')+'>'+c+'</option>').join('')+'</select><button type="submit">이동</button><span role="status"></span></form>':'')+'</div>').join("")+'</div>':'<p>이 카테고리에 글이 없습니다.</p>')+
     '<div class="toolbar">'+(page?'<a class="text-link" href="?category='+encodeURIComponent(category)+'&page='+(page-1)+'">이전</a>':'')+(rows.length===12?'<a class="text-link" href="?category='+encodeURIComponent(category)+'&page='+(page+1)+'">다음</a>':'')+'</div>';
    }
+   root.querySelectorAll(".move-category").forEach(form=>form.onsubmit=async event=>{
+    event.preventDefault();const button=form.querySelector("button"),note=form.querySelector('[role="status"]');button.disabled=true;
+    try{
+     const fresh=await window.BlogAuth.restore();if(!fresh)throw new Error("다시 로그인해 주세요.");
+     const category=form.querySelector("select").value;
+     const response=await fetch(cfg.url+"/rest/v1/posts?id=eq."+encodeURIComponent(form.dataset.post)+"&deleted_at=is.null",{method:"PATCH",headers:{apikey:cfg.key,Authorization:"Bearer "+fresh.access_token,"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify({category})});
+     if(!response.ok)throw new Error("이동하지 못했습니다. 권한과 연결을 확인해 주세요.");
+     const result=await response.json();if(!result.length)throw new Error("이동할 글을 찾지 못했습니다.");
+     await listing(root);
+    }catch(e){note.textContent=e.message;button.disabled=false;}
+   });
    await photos(root,session);
   }catch(e){root.innerHTML='<p role="alert">'+esc(e.message)+'</p><a href="/blog/">Blog 목록으로</a>';}
  }

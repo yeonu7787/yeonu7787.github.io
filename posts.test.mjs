@@ -25,3 +25,6 @@ const edit=await boot({signed:true,search:'?id=42'});assert.match(edit.get('#pos
 await edit.submit({title:'Changed',content:'Body',published:'true',summary:''});assert.ok(edit.calls.some(c=>c.method==='PATCH'&&c.url.includes('id=eq.42')));
 const del=await boot({signed:true,search:'?id=42'});del.get('#delete').onclick();await tick();assert.ok(del.calls.some(c=>c.method==='PATCH'&&JSON.parse(c.body).deleted_at));assert.deepEqual(del.moves,['/blog/']);
 console.log('PASS: login redirects Home, non-owner denied, new post, per-post edit/delete and return navigation');
+const study=await boot({signed:true,search:'?category='+encodeURIComponent('공부')});
+assert.equal(study.get('#category').value,'공부');
+console.log('PASS: study category default');

@@ -74,7 +74,8 @@
   }
   renderImages();
   document.querySelector("#published").value=String(!!post.published);
-  document.querySelector("#category").value=post.category||"일상";
+  const requestedCategory=new URLSearchParams(location.search).get("category");
+  document.querySelector("#category").value=post.category||(["일상","공부","개발"].includes(requestedCategory)?requestedCategory:"일상");
   if(window.EditorKit)draft=window.EditorKit.draft(document.querySelector("#editor"),post,images,()=>{dirty=true;renderImages();});
   document.querySelector("#photos").onchange=()=>run(async()=>{
    const input=document.querySelector("#photos"),files=Array.from(input.files||[]);
