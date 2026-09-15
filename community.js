@@ -46,24 +46,32 @@ window.Community=(()=>{
    });
   }catch(e){root.innerHTML='<h1>계정</h1><p role="alert">'+esc(e.message)+'</p>';}
  }
- async function comments(root,postId){
+ async function comments(root,postId,type="post"){
+  const target=type==="question"?"question_id":"post_id";let replyTo=null;
   let limit=20;
   async function render(){
    root.innerHTML='<h2>댓글</h2><p role="status">불러오는 중…</p>';
    try{
     const session=await window.BlogAuth.restore(),p=await profile(session);
-    const rows=await api("/rest/v1/comments?post_id=eq."+encodeURIComponent(postId)+"&select=id,author_id,body,created_at,member_profiles(nickname)&order=created_at.asc,id.asc&limit="+limit,{session});
-    root.innerHTML='<h2>댓글</h2><div id="comment-list">'+(rows.length?rows.map(c=>'<article class="comment" data-comment="'+esc(c.id)+'"><strong>'+esc(c.member_profiles?.nickname||"사용자")+'</strong>'+(c.author_id===cfg.owner?' <span class="owner-badge">블로그 주인</span>':'')+'<time>'+esc(new Date(c.created_at).toLocaleString("ko-KR"))+'</time><p class="prose">'+esc(c.body)+'</p><div class="toolbar">'+(session?.user.id===c.author_id?'<button class="secondary" data-edit-comment="'+esc(c.id)+'">수정</button>':'')+((session?.user.id===c.author_id||session?.user.id===cfg.owner)?'<button class="secondary" data-delete-comment="'+esc(c.id)+'">삭제</button>':'')+'</div></article>').join(""):'<p>첫 댓글을 남겨보세요.</p>')+'</div>'+(rows.length===limit?'<button id="more-comments" class="secondary">댓글 더 보기</button>':'')+
-    (session?(p?'<form class="editor" id="comment-form"><label for="comment-body">댓글 작성</label><textarea id="comment-body" name="body" maxlength="2000" required></textarea><div class="toolbar"><button type="submit">댓글 등록</button></div><p role="status"></p></form>':'<p><a class="text-link" href="/account/">닉네임을 설정한 후 댓글을 남겨주세요.</a></p>'):'<p><a class="text-link" href="/account/">로그인하고 댓글 남기기</a></p>')+'<p id="comment-status" role="status"></p>';
+    const rows=await api("/rest/v1/comments?"+target+"=eq."+encodeURIComponent(postId)+"&select=id,author_id,body,created_at,parent_id,member_profiles(nickname)&order=created_at.asc,id.asc&limit="+limit,{session});
+    root.innerHTML='<h2>댓글</h2><div id="comment-list">'+(rows.length?rows.map(c=>'<article class="comment'+(c.parent_id?' reply-comment':'')+'" data-comment="'+esc(c.id)+'"><strong>'+esc(c.member_profiles?.nickname||"사용자")+'</strong>'+(c.author_id===cfg.owner?' <span class="owner-badge">블로그 주인</span>':'')+(c.parent_id?'<span class="reply-context">↳ 댓글에 대한 답글</span>':'')+'<time>'+esc(new Date(c.created_at).toLocaleString("ko-KR"))+'</time><p class="prose">'+esc(c.body)+'</p><div class="toolbar">'+(session?.user.id===c.author_id?'<button class="secondary" data-edit-comment="'+esc(c.id)+'">수정</button>':'')+((session?.user.id===c.author_id||session?.user.id===cfg.owner)?'<button class="secondary" data-delete-comment="'+esc(c.id)+'">삭제</button>':'')+'</div></article>').join(""):'<p>첫 댓글을 남겨보세요.</p>')+'</div>'+(rows.length===limit?'<button id="more-comments" class="secondary">댓글 더 보기</button>':'')+
+    (session?(p?'<form class="editor" id="comment-form"><p id="reply-target"></p><button type="button" id="reply-cancel" class="secondary" hidden>답글 취소</button><label for="comment-body">댓글 / 답글 작성</label><textarea id="comment-body" name="body" maxlength="2000" required></textarea><div class="toolbar"><button type="submit">댓글 등록</button></div><p role="status"></p></form>':'<p><a class="text-link" href="/account/">닉네임을 설정한 후 댓글을 남겨주세요.</a></p>'):'<p><a class="text-link" href="/account/">로그인하고 댓글 남기기</a></p>')+'<p id="comment-status" role="status"></p>';
     const more=root.querySelector("#more-comments");if(more)more.onclick=()=>{limit+=20;render();};
     const form=root.querySelector("#comment-form");
     if(form)bind(form,async fd=>{
      const fresh=await window.BlogAuth.restore();if(!fresh)throw new Error("다시 로그인해 주세요.");
-     const result=await api("/rest/v1/comments",{method:"POST",session:fresh,data:{post_id:String(postId),author_id:fresh.user.id,body:fd.get("body").trim()}});
-     if(!result?.length)throw new Error("등록되지 않았습니다.");await render();
+     const result=await api("/rest/v1/comments",{method:"POST",session:fresh,data:{[target]:String(postId),parent_id:replyTo,author_id:fresh.user.id,body:fd.get("body").trim()}});
+     if(!result?.length)throw new Error("등록되지 않았습니다.");replyTo=null;await render();
     });
+    root.querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{
+     replyTo=b.dataset.reply;
+     const comment=rows.find(c=>String(c.id)===replyTo);
+     root.querySelector("#reply-target").textContent=(comment?.member_profiles?.nickname||"사용자")+"님에게 답글";
+     root.querySelector("#reply-cancel").hidden=false;root.querySelector("#comment-body").focus();
+    });
+    const cancel=root.querySelector("#reply-cancel");if(cancel)cancel.onclick=()=>{replyTo=null;root.querySelector("#reply-target").textContent="";cancel.hidden=true;};
     root.querySelectorAll("[data-delete-comment]").forEach(b=>b.onclick=async()=>{
-     if(!confirm("이 댓글을 삭제할까요?"))return;b.disabled=true;
+     if(!confirm("이 댓글을 삭제할까요? 답글은 유지됩니다."))return;b.disabled=true;
      try{const fresh=await window.BlogAuth.restore();if(!fresh)throw new Error("다시 로그인해 주세요.");const result=await api("/rest/v1/comments?id=eq."+encodeURIComponent(b.dataset.deleteComment),{method:"DELETE",session:fresh});if(!result?.length)throw new Error("삭제 권한이 없습니다.");await render();}catch(e){root.querySelector("#comment-status").textContent=e.message;b.disabled=false;}
     });
     root.querySelectorAll("[data-edit-comment]").forEach(b=>b.onclick=()=>{
@@ -76,7 +84,7 @@ window.Community=(()=>{
   }
   await render();
  }
- return {account,comments};
+ return {account,comments,api,esc,profile};
 })();
 const accountRoot=document.querySelector("#account-page");
 if(accountRoot)window.Community.account(accountRoot);
