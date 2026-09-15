@@ -3,7 +3,7 @@ window.BlogView = (() => {
  const cfg=window.SUPABASE_CONFIG;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  async function get(query,session=null){
-  const r=await fetch(cfg.url+"/rest/v1/posts?"+query,{headers:{apikey:cfg.key,...(session?{Authorization:"Bearer "+session.access_token}:{})}});
+  const r=await fetch(cfg.url+"/rest/v1/posts?"+query+"&deleted_at=is.null",{headers:{apikey:cfg.key,...(session?{Authorization:"Bearer "+session.access_token}:{})}});
   if(!r.ok)throw new Error("게시글을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
   return r.json();
  }
@@ -44,10 +44,12 @@ window.BlogView = (() => {
     document.title=p.title+" · 이연우";
     root.innerHTML='<article class="post-detail">'+(session?'<div class="page-tools"><a class="text-link" href="/write/?id='+encodeURIComponent(p.id)+'">글 수정</a></div>':'')+'<a class="text-link" href="/blog/">← Blog 목록으로</a><p class="muted">'+esc(date(p.created_at))+'</p><h1>'+esc(p.title)+'</h1><div class="prose">'+esc(p.content)+'</div><div class="post-gallery">'+(p.images||[]).map(path=>'<figure data-photo="'+esc(path)+'"></figure>').join("")+'</div></article>';
    }else{
+    const category=["일상","공부","개발"].includes(params.get("category"))?params.get("category"):"";
+    const categoryQuery=category?"&category=eq."+encodeURIComponent(category):"";
     const page=Math.max(0,Math.floor(Number(params.get("page"))||0));
-    const rows=await get("select=*"+filter+"&order=created_at.desc,id.desc&limit=12&offset="+page*12,session);
-    root.innerHTML='<div class="eyebrow">Personal notes</div><div class="section-heading"><h1>Blog</h1>'+(session?'<a class="text-link" href="/write/">새 글 작성</a>':'')+'</div>'+(rows.length?'<div class="post-grid">'+rows.map(card).join("")+'</div>':'<p>아직 공개된 글이 없습니다.</p>')+
-    '<div class="toolbar">'+(page?'<a class="text-link" href="?page='+(page-1)+'">이전</a>':'')+(rows.length===12?'<a class="text-link" href="?page='+(page+1)+'">다음</a>':'')+'</div>';
+    const rows=await get("select=*"+filter+categoryQuery+"&order=created_at.desc,id.desc&limit=12&offset="+page*12,session);
+    root.innerHTML='<div class="eyebrow">Personal notes</div><div class="section-heading"><h1>Blog</h1>'+(session?'<div><a class="text-link" href="/write/">새 글 작성</a> · <a href="/admin/?view=trash">휴지통</a></div>':'')+'</div><div class="category-links">'+['전체','일상','공부','개발'].map(c=>'<a href="?category='+encodeURIComponent(c==='전체'?'':c)+'"'+((category||'전체')===c?' aria-current="page"':'')+'>'+c+'</a>').join('')+'</div>'+(rows.length?'<div class="post-grid">'+rows.map(card).join("")+'</div>':'<p>아직 공개된 글이 없습니다.</p>')+
+    '<div class="toolbar">'+(page?'<a class="text-link" href="?category='+encodeURIComponent(category)+'&page='+(page-1)+'">이전</a>':'')+(rows.length===12?'<a class="text-link" href="?category='+encodeURIComponent(category)+'&page='+(page+1)+'">다음</a>':'')+'</div>';
    }
    await photos(root,session);
   }catch(e){root.innerHTML='<p role="alert">'+esc(e.message)+'</p><a href="/blog/">Blog 목록으로</a>';}

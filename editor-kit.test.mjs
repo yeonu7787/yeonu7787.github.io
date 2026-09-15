@@ -1,0 +1,24 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const store=new Map();
+function element(){return {children:[],append(...x){this.children.push(...x);},prepend(x){this.children.unshift(x);},replaceChildren(){this.children=[];},setAttribute(){},textContent:'',className:''};}
+const ctx=vm.createContext({window:{SUPABASE_CONFIG:{url:'https://example.supabase.co',owner:'owner',key:'public'},BlogAuth:{restore:async()=>({access_token:'test'})}},document:{createElement:element},localStorage:{getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},Date,confirm:()=>true,fetch:async()=>({ok:true,json:async()=>({signedURL:'/test'})})});
+vm.runInContext(readFileSync('editor-kit.js','utf8'),ctx);
+const fields=Object.fromEntries(['title','content','summary','published','category'].map(k=>[k,{value:k}]));
+const form={...element(),elements:{namedItem:k=>fields[k]},addEventListener(event,fn){this.input=fn;}};
+const images=['one','two'];
+const d=ctx.window.EditorKit.draft(form,{},images,()=>{});
+form.input();assert.equal(JSON.parse([...store.values()][0]).fields.content,'content');
+d.clear();assert.equal(store.size,0);
+d.save();
+fields.title.value='changed';
+const restored={...element(),elements:form.elements,addEventListener(){}};
+ctx.window.EditorKit.draft(restored,{},images,()=>{});
+restored.children[0].children[0].onclick();assert.equal(fields.title.value,'title');
+const container=element();let changed=0;
+await ctx.window.EditorKit.thumbnails(container,images,()=>changed++);
+container.children[0].children[3].onclick();
+assert.equal(images[0],'two');assert.equal(changed,1);
+await assert.rejects(()=>ctx.window.EditorKit.upload({type:'text/html',size:10}),/JPEG/);
+console.log('PASS: draft save/restore/clear, image reorder, upload type rejection');

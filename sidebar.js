@@ -4,7 +4,7 @@
  const cfg=window.SUPABASE_CONFIG;
  if(list&&cfg){
   try{
-   const response=await fetch(cfg.url+"/rest/v1/posts?select=id,title&published=eq.true&order=created_at.desc,id.desc&limit=5",{headers:{apikey:cfg.key}});
+   const response=await fetch(cfg.url+"/rest/v1/posts?select=id,title&published=eq.true&deleted_at=is.null&order=created_at.desc,id.desc&limit=5",{headers:{apikey:cfg.key}});
    if(!response.ok)throw new Error();
    const rows=await response.json();list.replaceChildren();
    if(!rows.length){const li=document.createElement("li");li.textContent="아직 공개된 글이 없습니다.";list.append(li);}

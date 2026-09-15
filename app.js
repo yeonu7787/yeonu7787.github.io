@@ -19,9 +19,10 @@ document.querySelector("#footer-name").textContent = profile.name;
 function portrait() {
  // Accept repository-local image paths only.
  const path = profile.photo || "";
+ const remote=window.SUPABASE_CONFIG&&path.startsWith(window.SUPABASE_CONFIG.url+"/storage/v1/object/public/profile-images/");
  const safe = /^assets\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(?:jpe?g|png|webp|avif)$/i.test(path);
- return '<figure class="portrait">'+(safe?'<img id="portrait-image" src="./'+esc(path)+'" alt="'+esc(profile.photoAlt)+'" width="600" height="750">':'')+
- '<div class="photo-placeholder"'+(safe?' hidden':'')+'><span class="photo-monogram">'+esc(profile.name.slice(0,1).toUpperCase())+'</span><span>사진 준비 중</span></div></figure>';
+ return '<figure class="portrait">'+(safe||remote?'<img id="portrait-image" src="'+esc(remote?path:"./"+path)+'" alt="'+esc(profile.photoAlt)+'" width="600" height="750">':'')+
+ '<div class="photo-placeholder"'+(safe||remote?' hidden':'')+'><span class="photo-monogram">'+esc(profile.name.slice(0,1).toUpperCase())+'</span><span>사진 준비 중</span></div></figure>';
 }
 function timeline(title, rows) {
  return '<section class="cv-section"><h2>'+esc(title)+'</h2>'+(rows.length?'<div class="timeline">'+rows.map(r=>'<div class="cv-row"><span class="period">'+esc(r.period)+'</span><div><h3>'+esc(r.school||r.title)+'</h3><p class="prose">'+esc([r.department,r.description||r.detail].filter(Boolean).join("\n"))+'</p></div></div>').join("")+'</div>':'<p class="muted">아직 등록된 내용이 없습니다.</p>')+'</section>';

@@ -23,5 +23,5 @@ await create.submit({title:'New',content:'Body',published:'false',summary:''});
 assert.ok(create.calls.some(c=>c.method==='POST'&&c.url.includes('/posts')));assert.deepEqual(create.moves,['/blog/?id=42']);
 const edit=await boot({signed:true,search:'?id=42'});assert.match(edit.get('#posts-app').innerHTML,/게시글 수정/);assert.match(edit.get('#posts-app').innerHTML,/Existing/);
 await edit.submit({title:'Changed',content:'Body',published:'true',summary:''});assert.ok(edit.calls.some(c=>c.method==='PATCH'&&c.url.includes('id=eq.42')));
-const del=await boot({signed:true,search:'?id=42'});del.get('#delete').onclick();await tick();assert.ok(del.calls.some(c=>c.method==='DELETE'));assert.deepEqual(del.moves,['/blog/']);
+const del=await boot({signed:true,search:'?id=42'});del.get('#delete').onclick();await tick();assert.ok(del.calls.some(c=>c.method==='PATCH'&&JSON.parse(c.body).deleted_at));assert.deepEqual(del.moves,['/blog/']);
 console.log('PASS: login redirects Home, non-owner denied, new post, per-post edit/delete and return navigation');
