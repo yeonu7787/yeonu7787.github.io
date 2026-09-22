@@ -42,7 +42,6 @@ function route() {
  if(name==="home"){
   main.innerHTML='<div id="home-tools" class="page-tools"></div><section class="home-layout"><div class="hero"><div class="eyebrow">소개</div><h1>'+esc(profile.greeting)+'</h1><div class="prose lead">'+esc(profile.introduction)+'</div><a class="text-link" href="#about">자기소개와 이력 보기 <span aria-hidden="true">↗</span></a>'+contactLinks()+'</div>'+portrait()+'</section>';
   main.insertAdjacentHTML("beforeend",'<section class="home-section"><div class="eyebrow">Education</div><div class="section-heading"><h2>현재 학력</h2><a class="text-link" href="#about">전체 학력 보기</a></div>'+(profile.education.length?profile.education.slice(0,1).map(e=>'<div class="education-item"><span class="muted">'+esc(e.period)+'</span><h3>'+esc(e.school||e.title||"학교명 미입력")+'</h3><p>'+esc(e.department||"")+'</p><p class="prose">'+esc(e.description||e.detail||"")+'</p></div>').join(""):'<p class="muted">학력 정보를 준비하고 있습니다.</p>')+'</section><section class="home-section"><div class="section-heading"><h2>최신 글</h2><a class="text-link" href="./blog/">모든 글 보기</a></div><div id="recent-posts">불러오는 중…</div></section>');
-  main.insertAdjacentHTML("beforeend",'<section class="home-contact"><h2>함께 이야기해요</h2>'+contactLinks()+'</section>');
   if(window.BlogView)window.BlogView.recent(document.querySelector("#recent-posts"));
   if(window.BlogAuth)window.BlogAuth.tools(document.querySelector("#home-tools"),'<a class="text-link" href="/admin/?view=home">홈 수정</a>');
   const img=document.querySelector("#portrait-image");
