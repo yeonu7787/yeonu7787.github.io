@@ -30,7 +30,7 @@ function timeline(title, rows) {
 function contactLinks() {
  const email=String(profile.email || "").trim();
  return '<div class="contact-links"><a class="text-link" href="https://github.com/yeonu7787" target="_blank" rel="noopener noreferrer">GitHub · yeonu7787 <span aria-hidden="true">↗</span></a>'+
- (email?'<a class="text-link" href="mailto:'+esc(encodeURIComponent(email).replace(/%40/g,"@"))+'">'+esc(email)+'</a>':'')+'</div>';
+ (email?'<span class="contact-email">'+esc(email)+'</span><a class="text-link" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to='+esc(encodeURIComponent(email))+'" target="_blank" rel="noopener noreferrer">Gmail로 보내기 ↗</a><button type="button" class="secondary" data-copy-email="'+esc(email)+'">이메일 주소 복사</button><span class="muted" role="status" data-copy-status></span>':'')+'</div>';
 }
 function route() {
  const path=location.hash.slice(1).replace(/^\/+|\/+$/g,"") || "home";
@@ -40,8 +40,9 @@ function route() {
  document.querySelectorAll("nav a").forEach(a=>{if(a.hash==="#"+name)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
  document.title=(name==="home"?"홈":name==="about"?"소개 · 이력":"페이지 없음")+" · "+profile.name;
  if(name==="home"){
-  main.innerHTML='<div id="home-tools" class="page-tools"></div><section class="home-layout"><div class="hero"><div class="eyebrow">소개</div><h1>'+esc(profile.greeting)+'</h1><div class="prose lead">'+esc(profile.introduction)+'</div><a class="text-link" href="#about">자기소개와 이력 보기 <span aria-hidden="true">↗</span></a></div>'+portrait()+'</section>';
+  main.innerHTML='<div id="home-tools" class="page-tools"></div><section class="home-layout"><div class="hero"><div class="eyebrow">소개</div><h1>'+esc(profile.greeting)+'</h1><div class="prose lead">'+esc(profile.introduction)+'</div><a class="text-link" href="#about">자기소개와 이력 보기 <span aria-hidden="true">↗</span></a>'+contactLinks()+'</div>'+portrait()+'</section>';
   main.insertAdjacentHTML("beforeend",'<section class="home-section"><div class="eyebrow">Education</div><div class="section-heading"><h2>현재 학력</h2><a class="text-link" href="#about">전체 학력 보기</a></div>'+(profile.education.length?profile.education.slice(0,1).map(e=>'<div class="education-item"><span class="muted">'+esc(e.period)+'</span><h3>'+esc(e.school||e.title||"학교명 미입력")+'</h3><p>'+esc(e.department||"")+'</p><p class="prose">'+esc(e.description||e.detail||"")+'</p></div>').join(""):'<p class="muted">학력 정보를 준비하고 있습니다.</p>')+'</section><section class="home-section"><div class="section-heading"><h2>최신 글</h2><a class="text-link" href="./blog/">모든 글 보기</a></div><div id="recent-posts">불러오는 중…</div></section>');
+  main.insertAdjacentHTML("beforeend",'<section class="home-contact"><h2>함께 이야기해요</h2>'+contactLinks()+'</section>');
   if(window.BlogView)window.BlogView.recent(document.querySelector("#recent-posts"));
   if(window.BlogAuth)window.BlogAuth.tools(document.querySelector("#home-tools"),'<a class="text-link" href="/admin/?view=home">홈 수정</a>');
   const img=document.querySelector("#portrait-image");
@@ -56,7 +57,18 @@ function route() {
   main.innerHTML='<div class="eyebrow">404</div><h1>페이지를 찾을 수 없습니다.</h1><a class="text-link" href="#home">홈으로 이동</a>';
  }
 }
-document.addEventListener("click",e=>{
+document.addEventListener("click",async e=>{
+ const copy=e.target.closest("[data-copy-email]");
+ if(copy){
+  const note=copy.closest(".contact-links").querySelector("[data-copy-status]");
+  try{
+   await navigator.clipboard.writeText(copy.dataset.copyEmail);
+   note.textContent="이메일 주소를 복사했습니다.";
+  }catch{
+   note.textContent="자동 복사를 사용할 수 없습니다. 위 이메일 주소를 선택해 복사해 주세요.";
+  }
+  return;
+ }
  if(e.target.closest("a.skip")){e.preventDefault();main.focus();main.scrollIntoView({block:"start"});}
 });
 window.addEventListener("hashchange",route);
