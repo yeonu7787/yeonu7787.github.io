@@ -32,7 +32,7 @@
    const session=await window.BlogAuth.restore();
    const owner=session?.user?.id===cfg?.owner;
    account.innerHTML=owner
-    ? '<p>관리자로 로그인했습니다.</p><a class="text-link" href="/admin/?view=home">홈 수정</a><br><a class="text-link" href="/write/">새 글 작성</a>'
+    ? '<p>관리자로 로그인했습니다.</p><a class="text-link" href="/admin/?view=home">홈 수정</a><br><a class="text-link" href="/admin/?view=about">자기소개 수정</a><br><a class="text-link" href="/write/">새 글 작성</a>'
     : session
      ? '<p>댓글과 질문을 작성할 수 있습니다.</p><a class="text-link" href="/account/">내 정보 · 닉네임</a>'
      : '<p>로그인하면 댓글과 질문을 작성할 수 있습니다.</p><a class="text-link" href="/account/">로그인 · 회원가입</a>';

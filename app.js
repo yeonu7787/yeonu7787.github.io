@@ -47,10 +47,11 @@ function route() {
   const img=document.querySelector("#portrait-image");
   if(img)img.addEventListener("error",()=>{img.hidden=true;document.querySelector(".photo-placeholder").hidden=false;},{once:true});
  }else if(name==="about"){
-  main.innerHTML='<div class="eyebrow">About me</div><h1>소개 · 이력</h1><p class="prose biography">'+esc(profile.biography)+'</p>'+
+  main.innerHTML='<div id="about-tools" class="page-tools"></div><div class="eyebrow">About me</div><h1>소개 · 이력</h1><p class="prose biography">'+esc(profile.biography)+'</p>'+
   timeline("학력",profile.education)+timeline("경력 · 활동",profile.experience)+
   '<section class="cv-section"><h2>관심 분야</h2>'+(profile.interests.length?'<ul class="interests">'+profile.interests.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p class="muted">관심 분야를 준비하고 있습니다.</p>')+'</section>'+
   '<section class="cv-section"><h2>연락처</h2>'+contactLinks()+'</section>';
+  if(window.BlogAuth)window.BlogAuth.tools(document.querySelector("#about-tools"),'<a class="text-link" href="/admin/?view=about">자기소개 수정</a>');
  }else{
   main.innerHTML='<div class="eyebrow">404</div><h1>페이지를 찾을 수 없습니다.</h1><a class="text-link" href="#home">홈으로 이동</a>';
  }

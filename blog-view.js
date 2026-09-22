@@ -15,7 +15,7 @@ window.BlogView = (() => {
  const date=v=>new Date(v).toLocaleDateString("ko-KR");
  function card(p){
   const path=p.images?.[0];
-  return '<a class="post-card" href="/blog/?id='+encodeURIComponent(p.id)+'">'+(path?'<div class="card-photo" data-photo="'+esc(path)+'" aria-label="대표 이미지"></div>':'<div class="card-photo no-photo">NOTE</div>')+'<div class="card-copy"><span class="muted">'+esc(date(p.created_at))+'</span><h3>'+esc(p.title)+(p.published===false?' <small>비공개</small>':'')+'</h3><p>'+esc(p.summary||String(p.content||"").slice(0,120))+'</p></div></a>';
+  return '<a class="post-card" href="/blog/?id='+encodeURIComponent(p.id)+'">'+(path?'<div class="card-photo" data-photo="'+esc(path)+'" aria-label="대표 이미지"></div>':'<div class="card-photo no-photo">NOTE</div>')+'<div class="card-copy"><span class="muted">'+esc(date(p.created_at))+'</span><h3>'+esc(p.title)+(p.published===false?' <small>비공개</small>':'')+'</h3><p>'+esc(p.summary||(window.PostFormat?window.PostFormat.decode(p.content).text:String(p.content||"")).slice(0,120))+'</p></div></a>';
  }
  async function photos(container,session=null){
   await Promise.all(Array.from(container.querySelectorAll("[data-photo]")).map(async el=>{
@@ -42,8 +42,9 @@ window.BlogView = (() => {
    if(id){
     const rows=await get("select=*"+filter+"&id=eq."+encodeURIComponent(id)+"&limit=1",session),p=rows[0];
     if(!p){root.innerHTML='<h1>글을 찾을 수 없습니다.</h1><a class="text-link" href="/blog/">블로그 목록으로</a>';return;}
+    const formatted=window.PostFormat?window.PostFormat.render(p.content,p.images||[]):{html:'<div class="prose">'+esc(p.content)+'</div>',remaining:p.images||[]};
     document.title=p.title+" · 이연우";
-    root.innerHTML='<article class="post-detail">'+(isOwner?'<div class="page-tools"><a class="text-link" href="/write/?id='+encodeURIComponent(p.id)+'">글 수정</a></div>':'')+'<a class="text-link" href="/blog/">← 블로그 목록으로</a><p class="muted">'+esc(date(p.created_at))+'</p><h1>'+esc(p.title)+'</h1><div class="prose">'+esc(p.content)+'</div><div class="post-gallery">'+(p.images||[]).map(path=>'<figure data-photo="'+esc(path)+'"></figure>').join("")+'</div></article>';
+    root.innerHTML='<article class="post-detail">'+(isOwner?'<div class="page-tools"><a class="text-link" href="/write/?id='+encodeURIComponent(p.id)+'">글 수정</a></div>':'')+'<a class="text-link" href="/blog/">← 블로그 목록으로</a><p class="muted">'+esc(date(p.created_at))+'</p><h1>'+esc(p.title)+'</h1>'+formatted.html+'<div class="post-gallery">'+formatted.remaining.map(path=>'<figure data-photo="'+esc(path)+'"></figure>').join("")+'</div></article>';
    }else{
     const category=["일상","공부","개발"].includes(params.get("category"))?params.get("category"):"";
     const categoryQuery=category?"&category=eq."+encodeURIComponent(category):"";

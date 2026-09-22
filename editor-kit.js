@@ -17,7 +17,7 @@ window.EditorKit=(()=>{
  }
  function draft(form,post,images,onRestore){
   const key="yeonu.draft."+cfg.owner+"."+(post.id||"new");
-  const fields=["title","content","summary","published","category"];
+  const fields=["title","content","summary","published","category","contentFormat"];
   const note=document.createElement("p");note.className="muted";note.setAttribute("role","status");form.prepend(note);
   let stored;try{stored=JSON.parse(localStorage.getItem(key)||"null");}catch{}
   if(stored){

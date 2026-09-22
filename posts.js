@@ -64,10 +64,12 @@
   }catch(e){document.querySelector("#list").textContent="목록을 불러오지 못했습니다.";status(e.message,true);}
  }
  function edit(post={}){
-  let images=[...(post.images||[])],draft=null;
+  let images=[...(post.images||[])],draft=null,formatter=null;
   if(!owner()){login();return;}
-  root.innerHTML='<div class="eyebrow">Editor</div><h1>'+(post.id?"게시글 수정":"새 글 작성")+'</h1><form id="editor" class="editor"><label for="title">제목</label><input name="title" id="title" required maxlength="200" value="'+esc(post.title)+'"><label for="content">본문</label><textarea name="content" id="content" required>'+esc(post.content)+'</textarea><label for="category">카테고리</label><select name="category" id="category"><option>일상</option><option>공부</option><option>개발</option></select><label for="summary">짧은 요약</label><input id="summary" name="summary" maxlength="500" value="'+esc(post.summary)+'"><label for="photos">사진 추가 (JPEG/PNG/WebP, 장당 5MB)</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="muted">첫 사진이 대표 이미지입니다. 추가한 순서대로 본문 아래에 표시됩니다.</p><div id="image-list"></div><label for="published">공개 설정</label><select name="published" id="published"><option value="false">비공개 초안</option><option value="true">공개</option></select><div class="toolbar"><button type="submit">저장</button><button type="button" id="cancel" class="secondary">목록으로</button>'+(post.id?'<button type="button" id="delete" class="danger">휴지통으로</button>':'')+'<button type="button" id="logout" class="secondary">로그아웃</button></div></form><p id="status" role="status"></p>';
+  root.innerHTML='<div class="eyebrow">Editor</div><h1>'+(post.id?"게시글 수정":"새 글 작성")+'</h1><form id="editor" class="editor"><label for="title">제목</label><input name="title" id="title" required maxlength="200" value="'+esc(post.title)+'"><label for="content">본문</label><textarea name="content" id="content" required>'+esc(post.content)+'</textarea><label for="category">카테고리</label><select name="category" id="category"><option>일상</option><option>공부</option><option>개발</option></select><label for="summary">짧은 요약</label><input id="summary" name="summary" maxlength="500" value="'+esc(post.summary)+'"><label for="photos">사진 추가 (JPEG/PNG/WebP, 장당 5MB)</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="muted">첫 사진이 대표 이미지입니다. 본문에 넣지 않은 사진은 글 아래에 표시됩니다.</p><div id="image-list"></div><label for="published">공개 설정</label><select name="published" id="published"><option value="false">비공개 초안</option><option value="true">공개</option></select><div class="toolbar"><button type="submit">저장</button><button type="button" id="cancel" class="secondary">목록으로</button>'+(post.id?'<button type="button" id="delete" class="danger">휴지통으로</button>':'')+'<button type="button" id="logout" class="secondary">로그아웃</button></div></form><p id="status" role="status"></p>';
+  if(window.PostFormat)formatter=window.PostFormat.mount(document.querySelector("#editor"),images);
   function renderImages(){
+   formatter?.refresh();
    if(window.EditorKit){window.EditorKit.thumbnails(document.querySelector("#image-list"),images,()=>{dirty=true;window.blogDirty=true;renderImages();draft?.save();});return;}
    document.querySelector("#image-list").innerHTML=images.map((path,i)=>'<div class="post-row"><span>사진 '+(i+1)+(i===0?' · 대표 이미지':'')+'</span><button type="button" class="secondary" data-remove="'+i+'">제외</button></div>').join("");
    root.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{images.splice(Number(b.dataset.remove),1);dirty=true;renderImages();});
@@ -86,7 +88,7 @@
   document.querySelector("#editor").oninput=()=>dirty=true;
   document.querySelector("#cancel").onclick=()=>{if(dirty&&!confirm("저장하지 않은 내용을 버릴까요?"))return;dirty=false;window.blogDirty=false;location.assign("/blog/");};
   document.querySelector("#editor").onsubmit=e=>{e.preventDefault();run(async()=>{
-   const fd=new FormData(e.target),data={title:fd.get("title").trim(),content:fd.get("content"),published:fd.get("published")==="true",summary:fd.get("summary")||"",category:fd.get("category")||"일상"};
+   const fd=new FormData(e.target),data={title:fd.get("title").trim(),content:formatter?formatter.serialize():fd.get("content"),published:fd.get("published")==="true",summary:fd.get("summary")||"",category:fd.get("category")||"일상"};
    if(!data.title)throw new Error("제목을 입력해 주세요.");
    if(auth)session=await auth.restore();
    if(!owner())throw new Error("관리자 로그인이 필요합니다.");
@@ -111,15 +113,16 @@
    dirty=false;window.blogDirty=false;location.assign("/blog/");
   });};
  }
- async function editHome(){
-  root.innerHTML='<h1>홈 편집</h1><p id="status" role="status">불러오는 중…</p>';
+ async function editHome(about=false){
+  const heading=about?"자기소개 수정":"홈 수정";
+  root.innerHTML='<h1>'+heading+'</h1><p id="status" role="status">불러오는 중…</p>';
   try{
    const rows=await request("/rest/v1/site_profile?id=eq.home&select=data");
    const data=rows[0]?.data||window.PROFILE;
-   const fields=[["name","이름"],["greeting","인사말"],["introduction","홈 소개"],["biography","자기소개"],["email","이메일"]];
-   root.innerHTML='<div class="eyebrow">Home editor</div><h1>홈 편집</h1><form id="home-form" class="editor">'+fields.map(([key,label])=>'<label for="home-'+key+'">'+label+'</label><textarea id="home-'+key+'" name="'+key+'">'+esc(data[key]||"")+'</textarea>').join("")+'<label for="home-photo">프로필 사진 교체</label><input id="home-photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="home-photo-preview" alt="선택한 프로필 사진" hidden style="max-width:150px"><h2>학력</h2><div id="education-fields"></div><button type="button" id="add-school" class="secondary">학력 추가</button><div class="toolbar"><button type="submit">홈에 저장</button><a class="text-link" href="/">홈으로</a></div></form><p id="status" role="status"></p>';
+   const fields=about?[["biography","자기소개"],["email","이메일"]]:[["name","이름"],["greeting","인사말"],["introduction","홈 소개"]];
+   root.innerHTML='<div class="eyebrow">Home editor</div><h1>'+heading+'</h1><form id="home-form" class="editor">'+fields.map(([key,label])=>'<label for="home-'+key+'">'+label+'</label><textarea id="home-'+key+'" name="'+key+'">'+esc(data[key]||"")+'</textarea>').join("")+(!about?'<label for="home-photo">프로필 사진 교체</label><input id="home-photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="home-photo-preview" alt="선택한 프로필 사진" hidden style="max-width:150px"><h2>학력</h2><div id="education-fields"></div><button type="button" id="add-school" class="secondary">학력 추가</button>':'')+(about?'<h2>경력 · 활동</h2><div id="experience-fields"></div><button type="button" id="add-experience" class="secondary">경력 · 활동 추가</button><label for="home-interests">관심 분야</label><p class="muted" id="interests-help">한 줄에 하나씩 적어 주세요. 삭제하려면 해당 줄을 지우세요.</p><textarea id="home-interests" name="interests" aria-describedby="interests-help">'+esc((data.interests||[]).join("\n"))+'</textarea>':'')+'<div class="toolbar"><button type="submit">저장</button><a class="text-link" href="'+(about?'/#about':'/')+'">'+(about?'자기소개로':'홈으로')+'</a></div></form><p id="status" role="status"></p>';
    let photoPreview=null;
-   document.querySelector("#home-photo").onchange=e=>{if(photoPreview)URL.revokeObjectURL(photoPreview);const file=e.target.files[0],img=document.querySelector("#home-photo-preview");img.hidden=!file;if(file){photoPreview=URL.createObjectURL(file);img.src=photoPreview;dirty=true;window.blogDirty=true;}};
+   if(!about)document.querySelector("#home-photo").onchange=e=>{if(photoPreview)URL.revokeObjectURL(photoPreview);const file=e.target.files[0],img=document.querySelector("#home-photo-preview");img.hidden=!file;if(file){photoPreview=URL.createObjectURL(file);img.src=photoPreview;dirty=true;window.blogDirty=true;}};
    const schools=[...(data.education||[])];
    const keys=[["school","학교명"],["department","학과"],["period","재학 기간"],["description","간단한 소개"]];
    const capture=()=>schools.forEach((row,i)=>keys.forEach(([key])=>row[key]=document.querySelector("#edu-"+i+"-"+key).value));
@@ -127,18 +130,32 @@
     document.querySelector("#education-fields").innerHTML=schools.map((row,i)=>'<fieldset><legend>학력 '+(i+1)+'</legend>'+keys.map(([key,label])=>'<label for="edu-'+i+'-'+key+'">'+label+'</label><input id="edu-'+i+'-'+key+'" value="'+esc(row[key]||"")+'">').join("")+'<button class="secondary" type="button" data-school="'+i+'">학력 삭제</button></fieldset>').join("");
     root.querySelectorAll("[data-school]").forEach(b=>b.onclick=()=>{capture();schools.splice(Number(b.dataset.school),1);dirty=true;window.blogDirty=true;renderSchools();});
    }
-   renderSchools();
-   document.querySelector("#add-school").onclick=()=>{capture();schools.push({});dirty=true;window.blogDirty=true;renderSchools();};
+   if(!about)renderSchools();
+   if(!about)document.querySelector("#add-school").onclick=()=>{capture();schools.push({});dirty=true;window.blogDirty=true;renderSchools();};
+   const experiences=(data.experience||[]).map(row=>({...row}));
+   const experienceKeys=[["period","기간"],["title","활동명 · 기관 또는 직책"],["detail","활동 내용"]];
+   const captureExperience=()=>experiences.forEach((row,i)=>experienceKeys.forEach(([key])=>row[key]=document.querySelector("#exp-"+i+"-"+key).value));
+   function renderExperience(){
+    document.querySelector("#experience-fields").innerHTML=experiences.map((row,i)=>'<fieldset><legend>경력 · 활동 '+(i+1)+'</legend>'+experienceKeys.map(([key,label])=>'<label for="exp-'+i+'-'+key+'">'+label+'</label><textarea id="exp-'+i+'-'+key+'">'+esc(row[key]||"")+'</textarea>').join("")+'<button class="secondary" type="button" data-experience="'+i+'">경력 · 활동 삭제</button></fieldset>').join("");
+    root.querySelectorAll("[data-experience]").forEach(button=>button.onclick=()=>{captureExperience();experiences.splice(Number(button.dataset.experience),1);dirty=true;window.blogDirty=true;renderExperience();});
+   }
+   if(about)renderExperience();
+   if(about)document.querySelector("#add-experience").onclick=()=>{captureExperience();experiences.push({});dirty=true;window.blogDirty=true;renderExperience();};
    document.querySelector("#home-form").oninput=()=>dirty=true;
    document.querySelector("#home-form").onsubmit=e=>{e.preventDefault();run(async()=>{
-    capture();const fd=new FormData(e.target),updated={...data,education:schools};
+    if(about)captureExperience();else capture();
+    const fd=new FormData(e.target);
+    const latest=await request("/rest/v1/site_profile?id=eq.home&select=data");
+    const updated={...(latest[0]?.data||data)};
+    if(about){updated.experience=experiences;updated.interests=String(fd.get("interests")||"").split(/\r?\n/).map(value=>value.trim()).filter(Boolean);}
+    else updated.education=schools;
     fields.forEach(([key])=>updated[key]=fd.get(key));
-    if(!updated.name.trim())throw new Error("이름을 입력해 주세요.");
-    const photo=document.querySelector("#home-photo").files?.[0];
+    if(!about&&!updated.name.trim())throw new Error("이름을 입력해 주세요.");
+    const photo=document.querySelector("#home-photo")?.files?.[0];
     if(photo){const path=await window.EditorKit.upload(photo,"profile-images");updated.photo=cfg.url+"/storage/v1/object/public/profile-images/"+path;}
     const result=await request("/rest/v1/site_profile?on_conflict=id",{method:"POST",data:{id:"home",data:updated},auth:true,upsert:true});
     if(!result?.length)throw new Error("저장되지 않았습니다. 권한 설정을 확인해 주세요.");
-    dirty=false;window.blogDirty=false;status("홈에 저장했습니다.");
+    dirty=false;window.blogDirty=false;status(about?"자기소개에 저장했습니다.":"홈에 저장했습니다.");
    });};
   }catch(e){status(e.message+" 홈 편집용 SQL이 적용되었는지 확인해 주세요.",true);}
  }
@@ -165,6 +182,7 @@
   if(!owner()){if(session){root.innerHTML='<h1>관리자 권한이 없습니다.</h1><a href="/">홈으로</a>';}else login();return;}
   if(new URLSearchParams(location.search).get("view")==="trash"){await trash();return;}
   if(new URLSearchParams(location.search).get("view")==="home")await editHome();
+  else if(new URLSearchParams(location.search).get("view")==="about")await editHome(true);
   else if(location.pathname.startsWith("/write")){
    const id=new URLSearchParams(location.search).get("id");
    if(id){
