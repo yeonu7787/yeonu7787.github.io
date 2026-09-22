@@ -41,15 +41,15 @@ window.BlogView = (() => {
    const filter=isOwner?"":"&published=eq.true";
    if(id){
     const rows=await get("select=*"+filter+"&id=eq."+encodeURIComponent(id)+"&limit=1",session),p=rows[0];
-    if(!p){root.innerHTML='<h1>글을 찾을 수 없습니다.</h1><a class="text-link" href="/blog/">Blog 목록으로</a>';return;}
+    if(!p){root.innerHTML='<h1>글을 찾을 수 없습니다.</h1><a class="text-link" href="/blog/">블로그 목록으로</a>';return;}
     document.title=p.title+" · 이연우";
-    root.innerHTML='<article class="post-detail">'+(isOwner?'<div class="page-tools"><a class="text-link" href="/write/?id='+encodeURIComponent(p.id)+'">글 수정</a></div>':'')+'<a class="text-link" href="/blog/">← Blog 목록으로</a><p class="muted">'+esc(date(p.created_at))+'</p><h1>'+esc(p.title)+'</h1><div class="prose">'+esc(p.content)+'</div><div class="post-gallery">'+(p.images||[]).map(path=>'<figure data-photo="'+esc(path)+'"></figure>').join("")+'</div></article>';
+    root.innerHTML='<article class="post-detail">'+(isOwner?'<div class="page-tools"><a class="text-link" href="/write/?id='+encodeURIComponent(p.id)+'">글 수정</a></div>':'')+'<a class="text-link" href="/blog/">← 블로그 목록으로</a><p class="muted">'+esc(date(p.created_at))+'</p><h1>'+esc(p.title)+'</h1><div class="prose">'+esc(p.content)+'</div><div class="post-gallery">'+(p.images||[]).map(path=>'<figure data-photo="'+esc(path)+'"></figure>').join("")+'</div></article>';
    }else{
     const category=["일상","공부","개발"].includes(params.get("category"))?params.get("category"):"";
     const categoryQuery=category?"&category=eq."+encodeURIComponent(category):"";
     const page=Math.max(0,Math.floor(Number(params.get("page"))||0));
     const rows=await get("select=*"+filter+categoryQuery+"&order=created_at.desc,id.desc&limit=12&offset="+page*12,session);
-    root.innerHTML='<div class="eyebrow">Personal notes</div><div class="section-heading"><h1>Blog</h1>'+(isOwner?'<div><a class="text-link" href="/write/?category='+encodeURIComponent(category)+'">'+esc(category?category+"에 글 작성":"새 글 작성")+'</a> · <a href="/admin/?view=trash">휴지통</a></div>':'')+'</div><div class="category-links">'+['전체','일상','공부','개발'].map(c=>'<a href="?category='+encodeURIComponent(c==='전체'?'':c)+'"'+((category||'전체')===c?' aria-current="page"':'')+'>'+c+'</a>').join('')+'</div>'+(rows.length?'<div class="post-grid">'+rows.map(p=>'<div class="managed-card">'+card(p)+(isOwner?'<form class="move-category" data-post="'+esc(p.id)+'"><label for="move-'+esc(p.id)+'">카테고리 이동</label><select id="move-'+esc(p.id)+'" name="category">'+['일상','공부','개발'].map(c=>'<option'+(c===(p.category||'일상')?' selected':'')+'>'+c+'</option>').join('')+'</select><button type="submit">이동</button><span role="status"></span></form>':'')+'</div>').join("")+'</div>':'<p>이 카테고리에 글이 없습니다.</p>')+
+    root.innerHTML='<div class="eyebrow">Personal notes</div><div class="section-heading"><h1>블로그</h1>'+(isOwner?'<div><a class="text-link" href="/write/?category='+encodeURIComponent(category)+'">'+esc(category?category+"에 글 작성":"새 글 작성")+'</a> · <a href="/admin/?view=trash">휴지통</a></div>':'')+'</div><div class="category-links">'+['전체','일상','공부','개발'].map(c=>'<a href="?category='+encodeURIComponent(c==='전체'?'':c)+'"'+((category||'전체')===c?' aria-current="page"':'')+'>'+c+'</a>').join('')+'</div>'+(rows.length?'<div class="post-grid">'+rows.map(p=>'<div class="managed-card">'+card(p)+(isOwner?'<form class="move-category" data-post="'+esc(p.id)+'"><label for="move-'+esc(p.id)+'">카테고리 이동</label><select id="move-'+esc(p.id)+'" name="category">'+['일상','공부','개발'].map(c=>'<option'+(c===(p.category||'일상')?' selected':'')+'>'+c+'</option>').join('')+'</select><button type="submit">이동</button><span role="status"></span></form>':'')+'</div>').join("")+'</div>':'<p>이 카테고리에 글이 없습니다.</p>')+
     '<div class="toolbar">'+(page?'<a class="text-link" href="?category='+encodeURIComponent(category)+'&page='+(page-1)+'">이전</a>':'')+(rows.length===12?'<a class="text-link" href="?category='+encodeURIComponent(category)+'&page='+(page+1)+'">다음</a>':'')+'</div>';
    }
    root.querySelectorAll(".move-category").forEach(form=>form.onsubmit=async event=>{
@@ -65,7 +65,7 @@ window.BlogView = (() => {
    });
    if(id&&window.Community&&root.querySelector(".post-detail")){const section=document.createElement("section");section.className="comments-section";root.append(section);window.Community.comments(section,id);}
    await photos(root,session);
-  }catch(e){root.innerHTML='<p role="alert">'+esc(e.message)+'</p><a href="/blog/">Blog 목록으로</a>';}
+  }catch(e){root.innerHTML='<p role="alert">'+esc(e.message)+'</p><a href="/blog/">블로그 목록으로</a>';}
  }
  return {recent,listing,card,imageUrl};
 })();
